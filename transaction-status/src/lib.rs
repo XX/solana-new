@@ -31,8 +31,6 @@ pub use solana_runtime::bank::RewardType;
     PartialEq,
     serde::Serialize,
     serde::Deserialize,
-    solana_frozen_abi_macro::AbiExample,
-    solana_frozen_abi_macro::AbiEnumVisitor,
     Clone,
     Copy
 )]

@@ -29,8 +29,5 @@ thiserror = "1.0"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 solana-runtime = { git = "https://github.com/solana-labs/solana", version = "=1.8.0" }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-solana-frozen-abi-macro = { git = "https://github.com/solana-labs/solana" }
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
