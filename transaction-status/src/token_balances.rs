@@ -1,4 +1,6 @@
-use crate::TransactionTokenBalance;
+use {
+    crate::TransactionTokenBalance,
+};
 
 pub type TransactionTokenBalances = Vec<Vec<TransactionTokenBalance>>;
 
@@ -22,12 +24,14 @@ impl TransactionTokenBalancesSet {
 
 #[cfg(not(target_arch = "wasm32"))]
 use {
+    solana_measure::measure::Measure,
+    solana_metrics::datapoint_debug,
     solana_runtime::{bank::Bank, transaction_batch::TransactionBatch},
     solana_account_decoder::parse_token::{
-        spl_token_id_v2_0, spl_token_v2_0_native_mint, token_amount_to_ui_amount, UiTokenAmount,
+        pubkey_from_spl_token, spl_token_id, spl_token_native_mint, token_amount_to_ui_amount, UiTokenAmount,
     },
     solana_sdk::{account::ReadableAccount, pubkey::Pubkey},
-    spl_token_v2_0::{
+    spl_token::{
         solana_program::program_pack::Pack,
         state::{Account as TokenAccount, Mint},
     },
@@ -36,13 +40,13 @@ use {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn is_token_program(program_id: &Pubkey) -> bool {
-    program_id == &spl_token_id_v2_0()
+    program_id == &spl_token_id()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
-    if mint == &spl_token_v2_0_native_mint() {
-        Some(spl_token_v2_0::native_mint::DECIMALS)
+    if mint == &spl_token_native_mint() {
+        Some(spl_token::native_mint::DECIMALS)
     } else {
         let mint_account = bank.get_account(mint)?;
 
@@ -58,59 +62,74 @@ fn get_mint_decimals(bank: &Bank, mint: &Pubkey) -> Option<u8> {
 pub fn collect_token_balances(
     bank: &Bank,
     batch: &TransactionBatch,
-    mut mint_decimals: &mut HashMap<Pubkey, u8>,
+    mint_decimals: &mut HashMap<Pubkey, u8>,
 ) -> TransactionTokenBalances {
     let mut balances: TransactionTokenBalances = vec![];
+    let mut collect_time = Measure::start("collect_token_balances");
 
     for transaction in batch.sanitized_transactions() {
-        let has_token_program = transaction
-            .message()
-            .account_keys_iter()
-            .any(|p| is_token_program(p));
+        let account_keys = transaction.message().account_keys();
+        let has_token_program = account_keys.iter().any(is_token_program);
 
         let mut transaction_balances: Vec<TransactionTokenBalance> = vec![];
         if has_token_program {
-            for (index, account_id) in transaction.message().account_keys_iter().enumerate() {
+            for (index, account_id) in account_keys.iter().enumerate() {
                 if transaction.message().is_invoked(index) || is_token_program(account_id) {
                     continue;
                 }
 
-                if let Some((mint, ui_token_amount)) =
-                    collect_token_balance_from_account(bank, account_id, &mut mint_decimals)
+                if let Some(TokenBalanceData {
+                                mint,
+                                ui_token_amount,
+                                owner,
+                            }) = collect_token_balance_from_account(bank, account_id, mint_decimals)
                 {
                     transaction_balances.push(TransactionTokenBalance {
                         account_index: index as u8,
                         mint,
                         ui_token_amount,
+                        owner,
                     });
                 }
             }
         }
         balances.push(transaction_balances);
     }
+    collect_time.stop();
+    datapoint_debug!(
+        "collect_token_balances",
+        ("collect_time_us", collect_time.as_us(), i64),
+    );
     balances
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn collect_token_balance_from_account(
+struct TokenBalanceData {
+    mint: String,
+    owner: String,
+    ui_token_amount: UiTokenAmount,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn collect_token_balance_from_account(
     bank: &Bank,
     account_id: &Pubkey,
     mint_decimals: &mut HashMap<Pubkey, u8>,
-) -> Option<(String, UiTokenAmount)> {
+) -> Option<TokenBalanceData> {
     let account = bank.get_account(account_id)?;
 
     let token_account = TokenAccount::unpack(account.data()).ok()?;
-    let mint_string = &token_account.mint.to_string();
-    let mint = &Pubkey::from_str(mint_string).unwrap_or_default();
+    let mint = pubkey_from_spl_token(&token_account.mint);
 
-    let decimals = mint_decimals.get(mint).cloned().or_else(|| {
-        let decimals = get_mint_decimals(bank, mint)?;
-        mint_decimals.insert(*mint, decimals);
+    let decimals = mint_decimals.get(&mint).cloned().or_else(|| {
+        let decimals = get_mint_decimals(bank, &mint)?;
+        mint_decimals.insert(mint, decimals);
         Some(decimals)
     })?;
 
-    Some((
-        mint_string.to_string(),
-        token_amount_to_ui_amount(token_account.amount, decimals),
-    ))
+    Some(TokenBalanceData {
+        mint: token_account.mint.to_string(),
+        owner: token_account.owner.to_string(),
+        ui_token_amount: token_amount_to_ui_amount(token_account.amount, decimals),
+    })
 }

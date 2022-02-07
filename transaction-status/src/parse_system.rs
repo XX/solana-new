@@ -1,15 +1,18 @@
-use crate::parse_instruction::{
-    check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
-};
-use bincode::deserialize;
-use serde_json::json;
-use solana_sdk::{
-    instruction::CompiledInstruction, pubkey::Pubkey, system_instruction::SystemInstruction,
+use {
+    crate::parse_instruction::{
+        check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
+    },
+    bincode::deserialize,
+    serde_json::json,
+    solana_sdk::{
+        instruction::CompiledInstruction, message::AccountKeys,
+        system_instruction::SystemInstruction,
+    },
 };
 
 pub fn parse_system(
     instruction: &CompiledInstruction,
-    account_keys: &[Pubkey],
+    account_keys: &AccountKeys,
 ) -> Result<ParsedInstructionEnum, ParseInstructionError> {
     let system_instruction: SystemInstruction = deserialize(&instruction.data)
         .map_err(|_| ParseInstructionError::InstructionNotParsable(ParsableProgram::System))?;
@@ -197,8 +200,10 @@ fn check_num_system_accounts(accounts: &[u8], num: usize) -> Result<(), ParseIns
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use solana_sdk::{message::Message, pubkey::Pubkey, system_instruction};
+    use {
+        super::*,
+        solana_sdk::{message::Message, pubkey::Pubkey, system_instruction},
+    };
 
     #[test]
     #[allow(clippy::same_item_push)]
@@ -215,7 +220,11 @@ mod test {
             system_instruction::create_account(&keys[0], &keys[1], lamports, space, &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "createAccount".to_string(),
                 info: json!({
@@ -227,12 +236,20 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
 
         let instruction = system_instruction::assign(&keys[0], &keys[1]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..1]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..1], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "assign".to_string(),
                 info: json!({
@@ -241,12 +258,16 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &[]).is_err());
+        assert!(parse_system(&message.instructions[0], &AccountKeys::new(&[], None)).is_err());
 
         let instruction = system_instruction::transfer(&keys[0], &keys[1], lamports);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "transfer".to_string(),
                 info: json!({
@@ -256,7 +277,11 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
 
         let seed = "test_seed";
         let instruction = system_instruction::create_account_with_seed(
@@ -264,7 +289,11 @@ mod test {
         );
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..3]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..3], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "createAccountWithSeed".to_string(),
                 info: json!({
@@ -285,7 +314,11 @@ mod test {
         );
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "createAccountWithSeed".to_string(),
                 info: json!({
@@ -299,12 +332,20 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
 
         let instruction = system_instruction::allocate(&keys[0], space);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..1]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..1], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "allocate".to_string(),
                 info: json!({
@@ -313,13 +354,17 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &[]).is_err());
+        assert!(parse_system(&message.instructions[0], &AccountKeys::new(&[], None)).is_err());
 
         let instruction =
             system_instruction::allocate_with_seed(&keys[1], &keys[0], seed, space, &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "allocateWithSeed".to_string(),
                 info: json!({
@@ -331,12 +376,20 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
 
         let instruction = system_instruction::assign_with_seed(&keys[1], &keys[0], seed, &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "assignWithSeed".to_string(),
                 info: json!({
@@ -347,7 +400,11 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
 
         let instruction = system_instruction::transfer_with_seed(
             &keys[1],
@@ -359,7 +416,11 @@ mod test {
         );
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..3]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..3], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "transferWithSeed".to_string(),
                 info: json!({
@@ -372,7 +433,11 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..2]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..2], None)
+        )
+            .is_err());
     }
 
     #[test]
@@ -386,7 +451,11 @@ mod test {
         let instruction = system_instruction::advance_nonce_account(&keys[1], &keys[0]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..3]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..3], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "advanceNonce".to_string(),
                 info: json!({
@@ -396,14 +465,22 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..2]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..2], None)
+        )
+            .is_err());
 
         let lamports = 55;
         let instruction =
             system_instruction::withdraw_nonce_account(&keys[1], &keys[0], &keys[2], lamports);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..5]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..5], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "withdrawFromNonce".to_string(),
                 info: json!({
@@ -416,13 +493,21 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..4]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..4], None)
+        )
+            .is_err());
 
         let instructions =
             system_instruction::create_nonce_account(&keys[0], &keys[1], &keys[4], lamports);
         let message = Message::new(&instructions, None);
         assert_eq!(
-            parse_system(&message.instructions[1], &keys[0..4]).unwrap(),
+            parse_system(
+                &message.instructions[1],
+                &AccountKeys::new(&keys[0..4], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "initializeNonce".to_string(),
                 info: json!({
@@ -433,12 +518,20 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[1], &keys[0..3]).is_err());
+        assert!(parse_system(
+            &message.instructions[1],
+            &AccountKeys::new(&keys[0..3], None)
+        )
+            .is_err());
 
         let instruction = system_instruction::authorize_nonce_account(&keys[1], &keys[0], &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
-            parse_system(&message.instructions[0], &keys[0..2]).unwrap(),
+            parse_system(
+                &message.instructions[0],
+                &AccountKeys::new(&keys[0..2], None)
+            )
+                .unwrap(),
             ParsedInstructionEnum {
                 instruction_type: "authorizeNonce".to_string(),
                 info: json!({
@@ -448,6 +541,10 @@ mod test {
                 }),
             }
         );
-        assert!(parse_system(&message.instructions[0], &keys[0..1]).is_err());
+        assert!(parse_system(
+            &message.instructions[0],
+            &AccountKeys::new(&keys[0..1], None)
+        )
+            .is_err());
     }
 }

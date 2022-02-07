@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "account-decoder",
+    "programs/config",
     "programs/vote",
     "transaction-status",
 ]
@@ -12,3 +13,6 @@ resolver = "2"
 
 [profile.dev]
 split-debuginfo = "unpacked"
+
+#[patch.crates-io]
+#ring = { path = "../../sowa/ring" }

@@ -17,13 +17,16 @@ pub mod validator_info;
 use {
     crate::parse_account_data::{parse_account_data, AccountAdditionalData, ParsedAccount},
     solana_sdk::{
-        account::ReadableAccount, account::WritableAccount, clock::Epoch,
-        fee_calculator::FeeCalculator, pubkey::Pubkey,
+        account::{ReadableAccount, WritableAccount},
+        clock::Epoch,
+        fee_calculator::FeeCalculator,
+        pubkey::Pubkey,
     },
-    std::{
-        str::FromStr,
-    },
+    std::str::FromStr,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Read, Write};
 
 pub type StringAmount = String;
 pub type StringDecimals = String;
@@ -93,8 +96,6 @@ impl UiAccount {
             ),
             #[cfg(not(target_arch = "wasm32"))]
             UiAccountEncoding::Base64Zstd => {
-                use std::io::{Read, Write};
-
                 let mut encoder = zstd::stream::write::Encoder::new(Vec::new(), 0).unwrap();
                 match encoder
                     .write_all(slice_data(account.data(), data_slice_config))
@@ -111,7 +112,7 @@ impl UiAccount {
             UiAccountEncoding::Base64Zstd => unimplemented!(),
             UiAccountEncoding::JsonParsed => {
                 if let Ok(parsed_data) =
-                    parse_account_data(pubkey, account.owner(), account.data(), additional_data)
+                parse_account_data(pubkey, account.owner(), account.data(), additional_data)
                 {
                     UiAccountData::Json(parsed_data)
                 } else {
@@ -139,16 +140,13 @@ impl UiAccount {
                 UiAccountEncoding::Base58 => bs58::decode(blob).into_vec().ok(),
                 UiAccountEncoding::Base64 => base64::decode(blob).ok(),
                 #[cfg(not(target_arch = "wasm32"))]
-                UiAccountEncoding::Base64Zstd => base64::decode(blob)
-                    .ok()
-                    .map(|zstd_data| {
-                        let mut data = vec![];
-                        zstd::stream::read::Decoder::new(zstd_data.as_slice())
-                            .and_then(|mut reader| reader.read_to_end(&mut data))
-                            .map(|_| data)
-                            .ok()
-                    })
-                    .flatten(),
+                UiAccountEncoding::Base64Zstd => base64::decode(blob).ok().and_then(|zstd_data| {
+                    let mut data = vec![];
+                    zstd::stream::read::Decoder::new(zstd_data.as_slice())
+                        .and_then(|mut reader| reader.read_to_end(&mut data))
+                        .map(|_| data)
+                        .ok()
+                }),
                 #[cfg(target_arch = "wasm32")]
                 UiAccountEncoding::Base64Zstd => unimplemented!(),
                 UiAccountEncoding::Binary | UiAccountEncoding::JsonParsed => None,
@@ -209,8 +207,10 @@ fn slice_data(data: &[u8], data_slice_config: Option<UiDataSliceConfig>) -> &[u8
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use solana_sdk::account::{Account, AccountSharedData};
+    use {
+        super::*,
+        solana_sdk::account::{Account, AccountSharedData},
+    };
 
     #[test]
     fn test_slice_data() {

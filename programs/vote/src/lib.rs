@@ -2,7 +2,10 @@
 #![allow(clippy::integer_arithmetic)]
 
 pub mod authorized_voters;
+pub mod vote_error;
 pub mod vote_instruction;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod vote_processor;
 pub mod vote_state;
 pub mod vote_transaction;
 

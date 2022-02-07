@@ -1,12 +1,16 @@
-use crate::{
-    parse_account_data::{ParsableAccount, ParseAccountError},
-    validator_info,
+use {
+    crate::{
+        parse_account_data::{ParsableAccount, ParseAccountError},
+        validator_info,
+    },
+    bincode::deserialize,
+    serde_json::Value,
+    solana_config_program::{get_config_data, ConfigKeys},
+    solana_sdk::{
+        pubkey::Pubkey,
+        stake::config::{self as stake_config, Config as StakeConfig},
+    },
 };
-use bincode::deserialize;
-use serde_json::Value;
-use solana_config_program::{get_config_data, ConfigKeys};
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::stake::config::{self as stake_config, Config as StakeConfig};
 
 pub fn parse_config(data: &[u8], pubkey: &Pubkey) -> Result<ConfigAccountType, ParseAccountError> {
     let parsed_account = if pubkey == &stake_config::id() {
@@ -34,8 +38,8 @@ pub fn parse_config(data: &[u8], pubkey: &Pubkey) -> Result<ConfigAccountType, P
 }
 
 fn parse_config_data<T>(data: &[u8], keys: Vec<(Pubkey, bool)>) -> Option<UiConfig<T>>
-where
-    T: serde::de::DeserializeOwned,
+    where
+        T: serde::de::DeserializeOwned,
 {
     let config_data: T = deserialize(get_config_data(data).ok()?).ok()?;
     let keys = keys
@@ -87,11 +91,10 @@ pub struct UiConfig<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::validator_info::ValidatorInfo;
-    use serde_json::json;
-    use solana_config_program::create_config_account;
-    use solana_sdk::account::ReadableAccount;
+    use {
+        super::*, crate::validator_info::ValidatorInfo, serde_json::json,
+        solana_config_program::create_config_account, solana_sdk::account::ReadableAccount,
+    };
 
     #[test]
     fn test_parse_config() {
@@ -112,7 +115,7 @@ mod test {
             info: serde_json::to_string(&json!({
                 "name": "Solana",
             }))
-            .unwrap(),
+                .unwrap(),
         };
         let info_pubkey = solana_sdk::pubkey::new_rand();
         let validator_info_config_account = create_config_account(
