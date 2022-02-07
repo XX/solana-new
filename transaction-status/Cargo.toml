@@ -19,7 +19,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 solana-account-decoder = { path = "../account-decoder", version = "=1.10.0" }
-solana-sdk = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-sdk = { git = "https://github.com/solana-labs/solana" }
 solana-vote-program = { path = "../programs/vote", version = "=1.10.0" }
 spl-associated-token-account = { git = "https://github.com/XX/solana-program-library-new", version = "=1.0.4", features = ["no-entrypoint"] }
 spl-memo = { version = "=3.0.1", git = "https://github.com/XX/solana-program-library-new", features = ["no-entrypoint"] }
@@ -29,7 +29,7 @@ thiserror = "1.0"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 solana-measure = { git = "https://github.com/solana-labs/solana" }
 solana-metrics = { git = "https://github.com/solana-labs/solana" }
-solana-runtime = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-runtime = { git = "https://github.com/solana-labs/solana" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

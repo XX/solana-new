@@ -16,17 +16,17 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0"
 serde_derive = "1.0"
-solana-frozen-abi = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
-solana-frozen-abi-macro = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
-solana-sdk = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-frozen-abi = { git = "https://github.com/solana-labs/solana" }
+solana-frozen-abi-macro = { git = "https://github.com/solana-labs/solana" }
+solana-sdk = { git = "https://github.com/solana-labs/solana" }
 thiserror = "1.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 solana-program-runtime = { git = "https://github.com/solana-labs/solana" }
-solana-metrics = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-metrics = { git = "https://github.com/solana-labs/solana" }
 
 [dev-dependencies]
-solana-logger = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-logger = { git = "https://github.com/solana-labs/solana" }
 
 [build-dependencies]
 rustc_version = "0.4"

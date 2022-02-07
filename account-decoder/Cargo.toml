@@ -20,7 +20,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 solana-config-program = { path = "../programs/config" }
-solana-sdk = { git = "https://github.com/solana-labs/solana" }#, rev = "41c160d58204cb2a9482f558f7285417dd442349" }
+solana-sdk = { git = "https://github.com/solana-labs/solana" }
 solana-vote-program = { path = "../programs/vote", version = "=1.10.0" }
 spl-token = { version = "=3.2.0", git = "https://github.com/XX/solana-program-library-new", features = ["no-entrypoint"] }
 thiserror = "1.0"
